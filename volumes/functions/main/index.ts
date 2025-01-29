@@ -4,6 +4,8 @@ const FUNCTIONS_BASE = "/home/deno/functions/";
 
 console.log("main function started");
 
+await loadDeployedWorkers();
+
 Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
   const { pathname } = url;
@@ -50,4 +52,17 @@ async function createWorker(workerName: string) {
     importMapPath,
     envVars,
   });
+}
+
+async function loadDeployedWorkers() {
+  for await (const dirEntry of Deno.readDir(FUNCTIONS_BASE)) {
+    if (!dirEntry.isDirectory || dirEntry.name === "main") continue;
+
+    // Auto start only will work for handlers that explicit use the 'Worker' class directly
+    // if the handler has been created with `EdgeWorker.start()` then it
+    // need to be manually invoked from its http url
+    await createWorker(dirEntry.name);
+
+    console.log(`worker: ${dirEntry.name} was been auto-started`);
+  }
 }
